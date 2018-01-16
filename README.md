@@ -100,7 +100,7 @@ Install some tools
 $ sudo apt-get install vim htop python3-pip
 ```
 
-Include the following in global bash profile to add aliases and change colour of bash prompt (TODO – Git)
+Include the following in global bash profile to add aliases and change colour of bash prompt **_(TODO – Git)_**
 ```sh
 $ sudo vi /etc/bash.bashrc
 ```
@@ -144,7 +144,7 @@ $ tail .bashrc -n 1
 $ export PATH="/home/pi/.local/bin/:$PATH" 
 ```
 
-We’re going to programmatically update the DNS record in AWS Route53 if public IP changes. This assumes that you’ve already completed the following in AWS (TODO – Git CloudFormation):
+We’re going to programmatically update the DNS record in AWS Route53 if public IP changes. This assumes that you’ve already completed the following in AWS **_(TODO – Git Cloudformation)_**:
 1.	Created a Route53 Hosted Zone
 2.	Created an IAM user account with programmatic access only
 3.	Created an IAM policy attached to this user with access to update the zone created in step 1
@@ -153,10 +153,10 @@ Configure AWS credentials for above user
 $ aws configure --profile dnsupdate
 ```
 
-Create a script to update DNS record in AWS Route53 if public IP changes
+Create a script to update DNS record in AWS Route53 if public IP changes **_(TODO – Git remember to update script to supply dnsupdate profile and also check is we’re calling aws from /usr/local/bin like in the S3 backup script)_**
 ```sh
 $ mkdir -p /home/pi/scripts
-$ vi /home/pi/scripts/update_route53.sh (TODO – Git, remember to update script to supply dnsupdate profile and also check is we’re calling aws from /usr/local/bin like in the S3 backup script)
+$ vi /home/pi/scripts/update_route53.sh
 $ chmod +x /home/pi/scripts/update_route53.sh
 $ (crontab -l 2>/dev/null; echo "#Update Route53"; echo "*/1 * * * * /home/pi/scripts/update_route53.shTEST >/dev/null 2>&1") | crontab –
 ```
@@ -174,7 +174,9 @@ $ sudo curl -sSL https://get.docker.com | sh
 $ sudo usermod -aG docker pi 
 ```
 
-Create a new docker network for internal communication between the Home Assistant and NGINX containers. We'll publish ports 80 and 443 from NGINX to the external interface of the Raspberry Pi, however ports to Home Assistant will not be published and the only access to this container will be via connections made on the Docker ‘docker-network1’ network (in this instance from NGINX to port 8123 on Home Assistant). Also note that although NGINX is publishing port 443 externally, this can be mapped to another obfuscated external port via the port-forwarding configuration on your router.
+> We need to create a new docker network for internal communication between the Home Assistant and NGINX containers. We'll publish ports 80 and 443 from NGINX to the external interface of the Raspberry Pi, however ports to Home Assistant will not be published and the only access to this container will be via connections made on the Docker ‘docker-network1’ network (in this instance from NGINX to port 8123 on Home Assistant). Also note that although NGINX is publishing port 443 externally, this can be mapped to another obfuscated external port via the port-forwarding configuration on your router.
+
+Create new docker network
 ```sh
 $ docker network create docker-network1
 ```
@@ -186,7 +188,7 @@ Create directory on Raspberry Pi where Home Assistant persistent config will be 
 $ mkdir –p /home/pi/dockerconf/home-assistant/
 ```
 
-Create a Docker container to run Home Assistant. We use the privileged switch so that the container can access the PiMote hardware which is physically plugged into the host. (TODO – Change to docker-compose)
+Create a Docker container to run Home Assistant. We use the privileged switch so that the container can access the PiMote hardware which is physically plugged into the host. **_(TODO – Change to docker-compose)_**
 ```sh
 $ docker run -d --restart unless-stopped --privileged --name="home-assistant" -v /home/pi/dockerconf/home-assistant:/config -v /etc/localtime:/etc/localtime:ro --network=docker-network1 lroguet/rpi-home-assistant
 ```
@@ -198,7 +200,7 @@ Create directories on Raspberry Pi where NGINX persistent config, logs and SSL c
 $ mkdir –p /home/pi/dockerconf/nginx/{conf,ssl,logs}
 ```
 
-Create the config for NGINX (TODO – Git)
+Create the config for NGINX **_(TODO – Git)_**
 ```sh
 $ vi /home/pi/dockerconf/nginx/conf/default.conf
 ```
@@ -209,7 +211,7 @@ $ sudo openssl dhparam -dsaparam -out /home/pi/dockerconf/nginx/ssl/dhparams.pem
 $ sudo chown pi:pi /home/pi/dockerconf/nginx/ssl/dhparams.pem 
 ```
 
-Create a Docker container to run NGINX (TODO – Change to docker-compose)
+Create a Docker container to run NGINX **_(TODO – Change to docker-compose)_**
 ```sh
 $ docker run -d --restart unless-stopped --name "nginx" -v /home/pi/dockerconf/nginx/conf/:/etc/nginx/sites-enabled/:ro -v /home/pi/dockerconf/nginx/ssl/:/etc/nginx/ssl/:ro -v /home/pi/dockerconf/nginx/logs/:/var/logs/nginx/:rw --network=docker-network1 -p=80:80 -p=443:443 tobi312/rpi-nginx
 ```
@@ -228,13 +230,14 @@ $ sudo echo "rsa-key-size = 4096" >> /etc/letsencrypt/config.ini
 $ sudo echo "email = myemail@domain.com" >> /etc/letsencrypt/config.ini
 ```
 
-For LetsEncrypt to generate the initial certificate it will place a validation file inside a ‘.well-known’ directory on the web server. This file needs to be accessible externally on port 80. Therefore, we will stop the current NGINX container, spin up a new temporary one that serves on port 80, and connect it to the directory that LetsEncrypt will write the validation file to.
+> For LetsEncrypt to generate the initial certificate it will place a validation file inside a ‘.well-known’ directory on the web server. This file needs to be accessible externally on port 80. Therefore, we will stop the current NGINX container, spin up a new temporary one that serves on port 80, and connect it to the directory that LetsEncrypt will write the validation file to.
+
 Create temporary NGINX directories
 ```sh 
 $ mkdir –p /home/pi/dockerconf/nginx/{htmltemp,conftemp}
 ```
 
-Create the temporary config for NGINX (TODO – Git)
+Create the temporary config for NGINX **_(TODO – Git)_**
 ```sh
 $ vi /home/pi/dockerconf/nginx/conftemp/default.conf 
 ```
@@ -265,7 +268,7 @@ $ (crontab -l 2>/dev/null; echo "#Renew SSL cert"; echo "0 11 * * Mon    sudo /o
 
 ### S3 Backup
 
-We’re going to backup the persistent data from the Raspberry Pi to AWS S3 every evening. This assumes that you’ve already completed the following in AWS (TODO – Git CloudFormation):
+We’re going to backup the persistent data from the Raspberry Pi to AWS S3 every evening. This assumes that you’ve already completed the following in AWS **_(TODO – Git CloudFormation)_**:
 1.	Created an S3 bucket
 2.	Created an IAM user account with programmatic access only
 3.	Created an IAM policy attached to this user so that they have write access into this bucket
@@ -275,10 +278,10 @@ Configure AWS credentials for above user
 $ aws configure --profile s3backup
 ```
 
-Create a script to run the backup to S3
+Create a script to run the backup to S3 **_(TODO – Git)_**
 ```sh
 $ mkdir -p /home/pi/scripts
-$ vi /home/pi/scripts/backup_s3.sh (TODO – Git)
+$ vi /home/pi/scripts/backup_s3.sh
 $ chmod +x /home/pi/scripts/backup_s3.sh
 $ (crontab -l 2>/dev/null; echo "#Backup to S3 "; echo "30 23 * * *	/home/pi/scripts/backup_s3.sh ") | crontab –
 ```
@@ -298,9 +301,9 @@ We use sSMTP to relay through to Gmail which allows us to send email from the Ra
 $ sudo apt-get install ssmtp mailutils
 ```
 
-Edit SSMTP config. Note that if you use Google’s 2-factor authentication (if not, you should!), then you’ll need to generate an application-specific set of credentials from your Google account.
+Edit SSMTP config. Note that if you use Google’s 2-factor authentication (if not, you should!), then you’ll need to generate an application-specific set of credentials from your Google account. **_(TODO – Git)_**
 ```sh
-$ sudo vi /etc/ssmtp/ssmtp.conf (TODO – Git) 
+$ sudo vi /etc/ssmtp/ssmtp.conf
 ```
 
 ### Additional notes / Things to do
