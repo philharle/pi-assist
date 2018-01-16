@@ -21,7 +21,7 @@ Download Raspbian and copy the image to the SD Card. (On a Mac I use the ‘dd�
 
 Create an empty file called ssh on the root of the SD Card. (This enables ssh access to the RaspberryPi by default when it starts up for the first time).
 
-Create the file /etc/wpa_supplicant/wpa_supplicant.conf on the SD Card with the following content, changing the values to suit your network settings (remember that the RaspberryPi wireless chip doesn’t support 5GHz networks).
+Create the file `/etc/wpa_supplicant/wpa_supplicant.conf` on the SD Card with the following content, changing the values to suit your network settings (remember that the RaspberryPi wireless chip doesn’t support 5GHz networks).
 ```
 network={
     ssid="NAME_OF_SSID" 
@@ -169,67 +169,99 @@ $ (crontab -l 2>/dev/null; echo "MAILTO=myemail@domain.com"; echo "") | crontab 
 ### Install Docker
 
 Run Docker installer and allow pi user access to control it
-sudo curl -sSL https://get.docker.com | sh 
-sudo usermod -aG docker pi 
+```sh
+$ sudo curl -sSL https://get.docker.com | sh 
+$ sudo usermod -aG docker pi 
+```
 
 Create a new docker network for internal communication between the Home Assistant and NGINX containers. We'll publish ports 80 and 443 from NGINX to the external interface of the Raspberry Pi, however ports to Home Assistant will not be published and the only access to this container will be via connections made on the Docker ‘docker-network1’ network (in this instance from NGINX to port 8123 on Home Assistant). Also note that although NGINX is publishing port 443 externally, this can be mapped to another obfuscated external port via the port-forwarding configuration on your router.
-docker network create docker-network1
+```sh
+$ docker network create docker-network1
+```
 
 ### Install Home Assistant
 
 Create directory on Raspberry Pi where Home Assistant persistent config will be stored. This will be mapped through as a volume to the Docker container.
-mkdir –p /home/pi/dockerconf/home-assistant/
+```sh
+$ mkdir –p /home/pi/dockerconf/home-assistant/
+```
 
 Create a Docker container to run Home Assistant. We use the privileged switch so that the container can access the PiMote hardware which is physically plugged into the host. (TODO – Change to docker-compose)
-docker run -d --restart unless-stopped --privileged --name="home-assistant" -v /home/pi/dockerconf/home-assistant:/config -v /etc/localtime:/etc/localtime:ro --network=docker-network1 lroguet/rpi-home-assistant
+```sh
+$ docker run -d --restart unless-stopped --privileged --name="home-assistant" -v /home/pi/dockerconf/home-assistant:/config -v /etc/localtime:/etc/localtime:ro --network=docker-network1 lroguet/rpi-home-assistant
+```
 
 ### Install NGINX
 
 Create directories on Raspberry Pi where NGINX persistent config, logs and SSL certificates will be stored. This will be mapped through as volumes to the Docker container.
-mkdir –p /home/pi/dockerconf/nginx/{conf,ssl,logs}
+```sh
+$ mkdir –p /home/pi/dockerconf/nginx/{conf,ssl,logs}
+```
 
 Create the config for NGINX (TODO – Git)
-vi /home/pi/dockerconf/nginx/conf/default.conf
+```sh
+$ vi /home/pi/dockerconf/nginx/conf/default.conf
+```
 
 Generate the DH parameters and change ownership. This uses the ‘dsaparam’ switch to speed up the generation process on the Raspberry Pi.
-sudo openssl dhparam -dsaparam -out /home/pi/dockerconf/nginx/ssl/dhparams.pem 4096 sudo chown pi:pi /home/pi/dockerconf/nginx/ssl/dhparams.pem 
+```sh
+$ sudo openssl dhparam -dsaparam -out /home/pi/dockerconf/nginx/ssl/dhparams.pem 4096
+$ sudo chown pi:pi /home/pi/dockerconf/nginx/ssl/dhparams.pem 
+```
 
 Create a Docker container to run NGINX (TODO – Change to docker-compose)
-docker run -d --restart unless-stopped --name "nginx" -v /home/pi/dockerconf/nginx/conf/:/etc/nginx/sites-enabled/:ro -v /home/pi/dockerconf/nginx/ssl/:/etc/nginx/ssl/:ro -v /home/pi/dockerconf/nginx/logs/:/var/logs/nginx/:rw --network=docker-network1 -p=80:80 -p=443:443 tobi312/rpi-nginx
+```sh
+$ docker run -d --restart unless-stopped --name "nginx" -v /home/pi/dockerconf/nginx/conf/:/etc/nginx/sites-enabled/:ro -v /home/pi/dockerconf/nginx/ssl/:/etc/nginx/ssl/:ro -v /home/pi/dockerconf/nginx/logs/:/var/logs/nginx/:rw --network=docker-network1 -p=80:80 -p=443:443 tobi312/rpi-nginx
+```
 
 ### Install Let’s Encrypt
 
 Install Let’s Encrypt binaries
-sudo git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt
-sudo /opt/letsencrypt/letsencrypt-auto --debug  
+```sh
+$ sudo git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt
+$ sudo /opt/letsencrypt/letsencrypt-auto --debug  
+```
 
 Update Let’s Encrypt config with the chosen key size and your email address
-sudo echo "rsa-key-size = 4096" >> /etc/letsencrypt/config.ini 
-sudo echo "email = myemail@domain.com" >> /etc/letsencrypt/config.ini
+```sh
+$ sudo echo "rsa-key-size = 4096" >> /etc/letsencrypt/config.ini 
+$ sudo echo "email = myemail@domain.com" >> /etc/letsencrypt/config.ini
+```
 
 For LetsEncrypt to generate the initial certificate it will place a validation file inside a ‘.well-known’ directory on the web server. This file needs to be accessible externally on port 80. Therefore, we will stop the current NGINX container, spin up a new temporary one that serves on port 80, and connect it to the directory that LetsEncrypt will write the validation file to.
 Create temporary NGINX directories
-mkdir –p /home/pi/dockerconf/nginx/{htmltemp,conftemp}
+```sh 
+$ mkdir –p /home/pi/dockerconf/nginx/{htmltemp,conftemp}
+```
 
 Create the temporary config for NGINX (TODO – Git)
-vi /home/pi/dockerconf/nginx/conftemp/default.conf 
+```sh
+$ vi /home/pi/dockerconf/nginx/conftemp/default.conf 
+```
 
 Create a temporary Docker container to run NGINX
-docker run -d --name "nginx-temp" -v /home/pi/dockerconf/nginx/conftemp/:/etc/nginx/sites-enabled/:ro -v /home/pi/dockerconf/nginx/htmltemp/:/var/www/html/:ro –v -network=docker-network1 -p=80:80 -p=443:443 tobi312/rpi-nginx 
+```sh
+$ docker run -d --name "nginx-temp" -v /home/pi/dockerconf/nginx/conftemp/:/etc/nginx/sites-enabled/:ro -v /home/pi/dockerconf/nginx/htmltemp/:/var/www/html/:ro –v -network=docker-network1 -p=80:80 -p=443:443 tobi312/rpi-nginx 
+```
 
 Ensure that you can access your FQDN externally on port 80 (HTTP) before continuing. You may need to set up a port-forwarding rule on your router if not done so already.
+
 Ask Let’s Encrypt to generate SSL certificate, replace with your FQDN
-/opt/letsencrypt/letsencrypt-auto certonly --webroot -w /home/pi/dockerconf/nginx/html/ -d MYFQDN.server.com --config /etc/letsencrypt/config.ini --agree-tos 
+```sh
+$ /opt/letsencrypt/letsencrypt-auto certonly --webroot -w /home/pi/dockerconf/nginx/html/ -d MYFQDN.server.com --config /etc/letsencrypt/config.ini --agree-tos 
+```
 
 Once SSL certificates have been successfully created stop the temporary NGINX container and tidy up the temporary directories
-docker stop nginx-temp 
-docker rm nginx-temp 
-rm -rf /home/pi/dockerconf/nginx/{htmltemp,conftemp} 
+```sh
+$ docker stop nginx-temp 
+$ docker rm nginx-temp 
+$ rm -rf /home/pi/dockerconf/nginx/{htmltemp,conftemp} 
+```
 
 Create a cron job to renew SSL certificate whenever it expires, replace with your FQDN. This will check SSL expiry and create a new certificate if required, copy over the certificates to the docker volume, then finally restart NGINX.
-(crontab -l 2>/dev/null; echo "#Renew SSL cert"; echo "0 11 * * Mon    sudo /opt/letsencrypt/letsencrypt-auto renew --config /etc/letsencrypt/config.ini --agree-tos && sudo sh -c \"echo $USER; cp /etc/letsencrypt/live/MYFQDN.server.com/*.pem /home/pi/dockerconf/nginx/ssl/; chown pi:pi /home/pi/dockerconf/nginx/ssl/*\" && docker restart nginx >/dev/null 2>&1") | crontab –
-
-docker run -d --name "nginx-temp" -v /home/pi/dockerconf/nginx/conftemp/:/etc/nginx/sites-enabled/:ro -v /home/pi/dockerconf/nginx/htmltemp/:/var/www/html/:ro –v -network=docker-network1 -p=80:80 -p=443:443 tobi312/rpi-nginx
+```sh
+$ (crontab -l 2>/dev/null; echo "#Renew SSL cert"; echo "0 11 * * Mon    sudo /opt/letsencrypt/letsencrypt-auto renew --config /etc/letsencrypt/config.ini --agree-tos && sudo sh -c \"echo $USER; cp /etc/letsencrypt/live/MYFQDN.server.com/*.pem /home/pi/dockerconf/nginx/ssl/; chown pi:pi /home/pi/dockerconf/nginx/ssl/*\" && docker restart nginx >/dev/null 2>&1") | crontab –
+```
 
 ### S3 Backup
 
@@ -237,14 +269,19 @@ We’re going to backup the persistent data from the Raspberry Pi to AWS S3 ever
 1.	Created an S3 bucket
 2.	Created an IAM user account with programmatic access only
 3.	Created an IAM policy attached to this user so that they have write access into this bucket
+
 Configure AWS credentials for above user
-aws configure --profile s3backup
+```sh
+$ aws configure --profile s3backup
+```
 
 Create a script to run the backup to S3
-mkdir -p /home/pi/scripts
-vi /home/pi/scripts/backup_s3.sh (TODO – Git)
-chmod +x /home/pi/scripts/backup_s3.sh
-(crontab -l 2>/dev/null; echo "#Backup to S3 "; echo "30 23 * * *	/home/pi/scripts/backup_s3.sh ") | crontab –
+```sh
+$ mkdir -p /home/pi/scripts
+$ vi /home/pi/scripts/backup_s3.sh (TODO – Git)
+$ chmod +x /home/pi/scripts/backup_s3.sh
+$ (crontab -l 2>/dev/null; echo "#Backup to S3 "; echo "30 23 * * *	/home/pi/scripts/backup_s3.sh ") | crontab –
+```
 
 Create a Lifecycle Rule on the S3 bucket to purge older backups
 	Name: Purge PiDocker Backups
@@ -257,10 +294,14 @@ Create a Lifecycle Rule on the S3 bucket to purge older backups
 ### Install sSMTP
 
 We use sSMTP to relay through to Gmail which allows us to send email from the Raspberry Pi. Install sSMTP binaries and the mailutils (providing the mail command we used to send email from scripts).
-sudo apt-get install ssmtp mailutils
+```sh
+$ sudo apt-get install ssmtp mailutils
+```
 
 Edit SSMTP config. Note that if you use Google’s 2-factor authentication (if not, you should!), then you’ll need to generate an application-specific set of credentials from your Google account.
-sudo vi /etc/ssmtp/ssmtp.conf (TODO – Git) 
+```sh
+$ sudo vi /etc/ssmtp/ssmtp.conf (TODO – Git) 
+```
 
 ### Additional notes / Things to do
 
