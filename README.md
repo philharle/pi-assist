@@ -100,7 +100,7 @@ Install some tools
 $ sudo apt-get install vim htop python3-pip
 ```
 
-Include the following in global bash profile to add aliases and change colour of bash prompt **_(TODO – Git)_**
+Include the following in global bash profile to add aliases and change colour of bash prompt
 ```sh
 $ sudo vi /etc/bash.bashrc
 ```
@@ -153,7 +153,7 @@ Configure AWS credentials for above user
 $ aws configure --profile dnsupdate
 ```
 
-Create a script to update DNS record in AWS Route53 if public IP changes **_(TODO – Git remember to update script to supply dnsupdate profile and also check is we’re calling aws from /usr/local/bin like in the S3 backup script)_**
+Create a script to update DNS record in AWS Route53 if public IP changes
 ```sh
 $ mkdir -p /home/pi/scripts
 $ vi /home/pi/scripts/update_route53.sh
@@ -200,7 +200,7 @@ Create directories on Raspberry Pi where NGINX persistent config, logs and SSL c
 $ mkdir –p /home/pi/dockerconf/nginx/{conf,ssl,logs}
 ```
 
-Create the config for NGINX **_(TODO – Git)_**
+Create the config for NGINX
 ```sh
 $ vi /home/pi/dockerconf/nginx/conf/default.conf
 ```
@@ -237,7 +237,7 @@ Create temporary NGINX directories
 $ mkdir –p /home/pi/dockerconf/nginx/{htmltemp,conftemp}
 ```
 
-Create the temporary config for NGINX **_(TODO – Git)_**
+Create the temporary config for NGINX
 ```sh
 $ vi /home/pi/dockerconf/nginx/conftemp/default.conf 
 ```
@@ -278,7 +278,7 @@ Configure AWS credentials for above user
 $ aws configure --profile s3backup
 ```
 
-Create a script to run the backup to S3 **_(TODO – Git)_**
+Create a script to run the backup to S3
 ```sh
 $ mkdir -p /home/pi/scripts
 $ vi /home/pi/scripts/backup_s3.sh
@@ -301,7 +301,7 @@ We use sSMTP to relay through to Gmail which allows us to send email from the Ra
 $ sudo apt-get install ssmtp mailutils
 ```
 
-Edit SSMTP config. Note that if you use Google’s 2-factor authentication (if not, you should!), then you’ll need to generate an application-specific set of credentials from your Google account. **_(TODO – Git)_**
+Edit SSMTP config. Note that if you use Google’s 2-factor authentication (if not, you should!), then you’ll need to generate an application-specific set of credentials from your Google account.
 ```sh
 $ sudo vi /etc/ssmtp/ssmtp.conf
 ```
