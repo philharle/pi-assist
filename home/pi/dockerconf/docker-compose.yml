@@ -1,0 +1,20 @@
+nginx1:
+  container_name: nginx
+  image: tobi312/rpi-nginx:latest
+  net: docker-network1
+  restart: unless-stopped
+  ports:
+    - 9091:9091
+  volumes:
+    - /home/pi/dockerconf/nginx/conf/:/etc/nginx/sites-enabled/:ro
+    - /home/pi/dockerconf/nginx/ssl/:/etc/nginx/ssl/:ro
+    - /home/pi/dockerconf/nginx/logs/:/var/logs/nginx/:rw
+homeassist1:
+  container_name: home-assistant
+  image: lroguet/rpi-home-assistant:latest
+  net: docker-network1
+  restart: unless-stopped
+  privileged: true
+  volumes:
+    - /home/pi/dockerconf/home-assistant:/config
+    - /etc/localtime:/etc/localtime:ro
