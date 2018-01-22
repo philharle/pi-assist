@@ -339,6 +339,8 @@ $ sudo vi /etc/ssmtp/ssmtp.conf
 
 ### Additional notes / Things to do
 
+* Updating docker container images
+docker-compose pull && docker-compose up
 * HAASKA installation – to be documented
 * Smart Devices discovery – as we’ve set the Haaska lambda ‘expose_by_default’ value to ‘false’, to enable devices in Home Assistant to show in the Alexa app you need to customise the device in Home Assistant and set the ‘haaska_hidden’ property to ‘false’.
 * Script to check for Raspbian updates
