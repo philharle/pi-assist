@@ -95,7 +95,7 @@ else
 EOF
 
     # Update the Hosted Zone record
-    /usr/local/bin/aws route53 change-resource-record-sets --hosted-zone-id $ZONEID --change-batch file://"$TMPFILE" >> "$LOGFILE"
+    /usr/local/bin/aws route53 change-resource-record-sets --profile dnsupdate --hosted-zone-id $ZONEID --change-batch file://"$TMPFILE" >> "$LOGFILE"
     echo "" >> "$LOGFILE"
 
     # Clean up
