@@ -188,9 +188,21 @@ Create directory on Raspberry Pi where Home Assistant persistent config will be 
 $ mkdir –p /home/pi/dockerconf/home-assistant/
 ```
 
-Create a Docker container to run Home Assistant. We use the privileged switch so that the container can access the PiMote hardware which is physically plugged into the host. **_(TODO – Change to docker-compose)_**
+Create a Docker container to run Home Assistant. We use the privileged switch so that the container can access the PiMote hardware which is physically plugged into the host.
 ```sh
 $ docker run -d --restart unless-stopped --privileged --name="home-assistant" -v /home/pi/dockerconf/home-assistant:/config -v /etc/localtime:/etc/localtime:ro --network=docker-network1 lroguet/rpi-home-assistant
+```
+or add the following into a `docker-compose.yml` file and use `docker-compose up -d`
+```yaml
+homeassist1:
+  container_name: home-assistant
+  image: lroguet/rpi-home-assistant:latest
+  net: home-network1
+  restart: unless-stopped
+  privileged: true
+  volumes:
+    - /home/pi/dockerconf/home-assistant:/config
+    - /etc/localtime:/etc/localtime:ro
 ```
 
 ### Install NGINX
