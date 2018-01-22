@@ -174,6 +174,11 @@ $ sudo curl -sSL https://get.docker.com | sh
 $ sudo usermod -aG docker pi 
 ```
 
+Install Docker compose
+```sh
+$ sudo curl -L https://github.com/mjuu/rpi-docker-compose/blob/master/v1.12.0/docker-compose-v1.12.0?raw=true -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
+```
+
 > We need to create a new docker network for internal communication between the Home Assistant and NGINX containers. We'll publish ports 80 and 443 from NGINX to the external interface of the Raspberry Pi, however ports to Home Assistant will not be published and the only access to this container will be via connections made on the Docker ‘docker-network1’ network (in this instance from NGINX to port 8123 on Home Assistant). Also note that although NGINX is publishing port 443 externally, this can be mapped to another obfuscated external port via the port-forwarding configuration on your router.
 
 Create new docker network
@@ -197,7 +202,7 @@ or add the following into a `docker-compose.yml` file and use `docker-compose up
 homeassist1:
   container_name: home-assistant
   image: lroguet/rpi-home-assistant:latest
-  net: home-network1
+  net: docker-network1
   restart: unless-stopped
   privileged: true
   volumes:
@@ -223,9 +228,23 @@ $ sudo openssl dhparam -dsaparam -out /home/pi/dockerconf/nginx/ssl/dhparams.pem
 $ sudo chown pi:pi /home/pi/dockerconf/nginx/ssl/dhparams.pem 
 ```
 
-Create a Docker container to run NGINX **_(TODO – Change to docker-compose)_**
+Create a Docker container to run NGINX
 ```sh
 $ docker run -d --restart unless-stopped --name "nginx" -v /home/pi/dockerconf/nginx/conf/:/etc/nginx/sites-enabled/:ro -v /home/pi/dockerconf/nginx/ssl/:/etc/nginx/ssl/:ro -v /home/pi/dockerconf/nginx/logs/:/var/logs/nginx/:rw --network=docker-network1 -p=80:80 -p=443:443 tobi312/rpi-nginx
+```
+or add the following into a `docker-compose.yml` file and use `docker-compose up -d`
+```yaml
+nginx1:
+  container_name: nginx
+  image: tobi312/rpi-nginx:latest
+  net: docker-network1
+  restart: unless-stopped
+  ports:
+    - 9091:9091
+  volumes:
+    - /home/pi/dockerconf/nginx/conf/:/etc/nginx/sites-enabled/:ro
+    - /home/pi/dockerconf/nginx/ssl/:/etc/nginx/ssl/:ro
+    - /home/pi/dockerconf/nginx/logs/:/var/logs/nginx/:rw
 ```
 
 ### Install Let’s Encrypt
@@ -322,8 +341,6 @@ $ sudo vi /etc/ssmtp/ssmtp.conf
 
 * HAASKA installation – to be documented
 * Smart Devices discovery – as we’ve set the Haaska lambda ‘expose_by_default’ value to ‘false’, to enable devices in Home Assistant to show in the Alexa app you need to customise the device in Home Assistant and set the ‘haaska_hidden’ property to ‘false’.
-* Docker Compose
-sudo curl -L https://github.com/mjuu/rpi-docker-compose/blob/master/v1.12.0/docker-compose-v1.12.0?raw=true -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
 * Script to check for Raspbian updates
 * Check ssh logs
 cat auth.log | grep -a -v CRON | GREP FAIL????
