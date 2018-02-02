@@ -348,11 +348,16 @@ tar xvf AgentDependencies.tar.gz -C /tmp/
 sudo python ./awslogs-agent-setup.py --region eu-west-1 --dependency-path /tmp/AgentDependencies
 ```
 
-Specify the AWS credentials, region and log paths.
+Specify the AWS credentials, region and log paths
+
 The configuration file will be saved to ```/var/awslogs/etc/awslogs.conf```
+
 You can use ```sudo service awslogs start|stop|status|restart``` to control the daemon
+
 Diagnostic information is saved at ```/var/log/awslogs.log```
+
 You can rerun interactive setup using ```sudo python ./awslogs-agent-setup.py --region eu-west-1 --only-generate-config```
+
 The AWS credentials are being stored in ```/root/.aws/credentials```
 
 Example of awslogs.conf
