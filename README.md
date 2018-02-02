@@ -337,6 +337,43 @@ Edit SSMTP config. Note that if you use Google’s 2-factor authentication (if n
 $ sudo vi /etc/ssmtp/ssmtp.conf
 ```
 
+### Install AWS Logs
+
+Install AWS Logs agent to upload log data to CloudWatch Logs
+```sh
+mkdir ~/temp/awslogs; cd ~/temp/awslogs
+curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
+curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/AgentDependencies.tar.gz -O
+tar xvf AgentDependencies.tar.gz -C /tmp/
+sudo python ./awslogs-agent-setup.py --region eu-west-1 --dependency-path /tmp/AgentDependencies
+```
+
+Specify the AWS credentials, region and log paths.
+The configuration file will be saved to ```/var/awslogs/etc/awslogs.conf```
+You can use ```sudo service awslogs start|stop|status|restart``` to control the daemon
+Diagnostic information is saved at ```/var/log/awslogs.log```
+You can rerun interactive setup using ```sudo python ./awslogs-agent-setup.py --region eu-west-1 --only-generate-config```
+The AWS credentials are being stored in ```/root/.aws/credentials```
+
+Example of awslogs.conf
+```
+[/home/pi/dockerconf/home-assistant/scripts/pyenergenie/HA_socket_action.log]
+log_stream_name = {hostname}
+initial_position = start_of_file
+file = /home/pi/dockerconf/home-assistant/scripts/pyenergenie/HA_socket_action.log
+datetime_format = %Y-%m-%d %H:%M:%S
+buffer_duration = 5000
+log_group_name = /pidocker/homeassistant/energenie_socketaction
+
+[/var/log/auth.log]
+log_stream_name = {hostname}
+initial_position = start_of_file
+file = /var/log/auth.log
+datetime_format = %Y-%m-%d %H:%M:%S
+buffer_duration = 5000
+log_group_name = /pidocker/auth
+```
+
 ### Additional notes / Things to do
 
 * Updating docker container images
