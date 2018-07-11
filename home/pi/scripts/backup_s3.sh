@@ -1,48 +1,63 @@
-map $http_upgrade $connection_upgrade {
-    default upgrade;
-    ''      close;
+#!/bin/bash
+# Backup data to S3
+
+bucket="MY_BUCKET_NAME_HERE"
+server="my_server_name_here"
+today=`date +"%Y_%m_%d"`
+overallStatus=0 #Prime the value, it's only overwritten if a failure is detected
+
+# Create function
+syncS3 () {
+    now=$(date +"%Y-%m-%d %H:%M:%S")
+    echo $now Syncing $1 to $bucket-$server_$today
+
+    #As part of the sync we exclude secrets.yaml (cos we only upload an obsfucated copy), and the homeassistant DB (cos we upload a backup copy instead)
+    /usr/local/bin/aws s3 cp $1 s3://$bucket/$server\_$today/$2 --recursive --exclude "*secrets.yaml" --exclude "*home-assistant_v2.db" --profile s3backup --only-show-errors
+
+    if [ $? -eq 0 ]; then
+	now=$(date +"%Y-%m-%d %H:%M:%S")
+        echo $now Success
+	#No need to change or overwrite overallStatus. We use the primed value above if sucessfull or the failure value if set previously
+    else
+        now=$(date +"%Y-%m-%d %H:%M:%S")
+	echo $now Failure
+        #Set overallStatus to failure
+    	overallStatus=1
+    fi
 }
 
-server {
-    server_name FQDN.server.com;
+# Backup dockerconf folder
+# Remember to add exclusions to function
+###docker stop home-assistant > /dev/null
+#Fixes issues with pi user being unable to read file
+sudo chmod 644 /home/pi/dockerconf/home-assistant/nest.conf
+###sudo chmod 644 /home/pi/dockerconf/jenkins/identity.key.enc
+###sudo chmod 744 /home/pi/dockerconf/jenkins/secrets/
+sudo chmod 644 /home/pi/dockerconf/portainer/portainer.db
+sudo chmod 744 /home/pi/dockerconf/portainer/tls
+sudo chmod 744 /home/pi/dockerconf/portainer/compose
+#Create an copy of the secrets file with the passwords removed. We exclude the actual secrets.yaml file from uploading in the s3 copy command
+tail -n +4 /home/pi/dockerconf/home-assistant/secrets.yaml | awk -F':' '{print $1 ": value_obsfucated_during_backup"}' > /home/pi/dockerconf/home-assistant/secrets.yaml_obsfucatedbackup
+#Create a copy of the live DB. We'll backup this one, not the live one
+cp /home/pi/dockerconf/home-assistant/home-assistant_v2.db /home/pi/dockerconf/home-assistant/home-assistant_v2.db_backup
+syncS3 /home/pi/dockerconf
+rm /home/pi/dockerconf/home-assistant/home-assistant_v2.db_backup
+sleep 5
+###docker start home-assistant > /dev/null
 
-    # These shouldn't need to be changed
-    listen [::]:80 default_server ipv6only=off;
-    return 301 https://$host$request_uri:443;
-}
+# Backup crontab
+mkdir -p /home/pi/tmp/crontab
+crontab -u pi -l >> /home/pi/tmp/crontab/crontab.tmp
+syncS3 /home/pi/tmp/crontab crontab
+rm -rf /home/pi/tmp/crontab
 
-server {
-    server_name FQDN.server.com;
+# Backup scripts
+# Remember to add exclusions to function
+syncS3 /home/pi/scripts scripts
 
-    # Ensure these lines point to your SSL certificate and key
-    ssl_certificate /etc/nginx/ssl/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-
-    # Ensure this line points to your dhparams file
-    ssl_dhparam /etc/nginx/ssl/dhparams.pem;
-    # If issues with missing file run
-    # sudo openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048
-    # or if this is too CPU intensive on a RaspberryPi then run
-    # sudo openssl dhparam -dsaparam -out /etc/nginx/ssl/dhparam.pem 4096
-
-    # These shouldn't need to be changed
-    listen [::]:443 default_server ipv6only=off; # if your nginx version is >= 1.9.5 you can also add the "http2" flag here
-    add_header Strict-Transport-Security "max-age=31536000; includeSubdomains";
-    ssl on;
-    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4";
-    ssl_prefer_server_ciphers on;
-    ssl_session_cache shared:SSL:10m;
-
-    proxy_buffering off;
-
-    location / {
-        proxy_pass http://home-assistant:8123;
-        proxy_set_header Host $host;
-        proxy_redirect http:// https://;
-        proxy_http_version 1.1;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-   }
-}
+# Alert on overall status
+if [ $overallStatus -eq 1 ]; then
+	echo "SCRIPT FAILED"
+	sleep 5
+	#Flash red light continuously
+fi
